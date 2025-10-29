@@ -1,0 +1,7 @@
+node_modules/
+.env
+temp-pic/*
+!temp-pic/.gitkeep
+/src/generated/prisma
+.DS_Store
+temp-pic/
