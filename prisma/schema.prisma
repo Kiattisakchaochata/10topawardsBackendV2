@@ -17,6 +17,7 @@ enum Role {
   USER
   ADMIN
 }
+
 enum OAuthProvider {
   GOOGLE
   FACEBOOK
@@ -68,35 +69,38 @@ enum ScriptStrategy {
   afterInteractive
   lazyOnload
 }
+
 // ----------------------
 // Users & Auth
 // ----------------------
 model User {
-  id            String   @id @default(cuid())
-  name          String   @db.VarChar(191)
-  email         String   @unique
-  password_hash String?
+  id             String    @id @default(cuid())
+  name           String    @db.VarChar(191)
+  email          String    @unique
+  password_hash  String?
   picture        String?   @db.VarChar(512)
   email_verified DateTime?
-  role          Role     @default(USER)
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  role           Role      @default(USER)
+  created_at     DateTime  @default(now())
+  updated_at     DateTime  @updatedAt
 
-  reviews       Review[]
-  reviewReplies ReviewReply[]
-  imageRatings  ImageRating[]
-  oauthAccounts OAuthAccount[]
+  reviews        Review[]
+  reviewReplies  ReviewReply[]
+  imageRatings   ImageRating[]
+  oauthAccounts  OAuthAccount[]
+  storeFeedbacks StoreFeedback[]
 }
+
 model OAuthAccount {
-  id                    String         @id @default(cuid())
-  user_id               String
-  provider              OAuthProvider
-  provider_account_id   String         @db.VarChar(255) // เช่น Google sub / Facebook id
-  access_token          String?        @db.Text
-  refresh_token         String?        @db.Text
-  expires_at            DateTime?
-  created_at            DateTime       @default(now())
-  updated_at            DateTime       @updatedAt
+  id                  String        @id @default(cuid())
+  user_id             String
+  provider            OAuthProvider
+  provider_account_id String        @db.VarChar(255) // เช่น Google sub / Facebook id
+  access_token        String?       @db.Text
+  refresh_token       String?       @db.Text
+  expires_at          DateTime?
+  created_at          DateTime      @default(now())
+  updated_at          DateTime      @updatedAt
 
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
@@ -108,13 +112,13 @@ model OAuthAccount {
 // Category
 // ----------------------
 model Category {
-  id           String   @id @default(cuid())
-  name         String   @unique @db.VarChar(160)
-  slug         String   @unique @db.VarChar(160)
+  id           String  @id @default(cuid())
+  name         String  @unique @db.VarChar(160)
+  slug         String  @unique @db.VarChar(160)
   cover_image  String?
   image_url    String?
-  order_number Int      @unique
-  avg_review   Float    @default(0)
+  order_number Int     @unique
+  avg_review   Float   @default(0)
 
   stores Store[]
 
@@ -126,34 +130,34 @@ model Category {
 // Store (ธุรกิจหลัก)
 // ----------------------
 model Store {
-  id              String   @id @default(cuid())
-  name            String   @db.VarChar(120)
-  slug            String   @unique @db.VarChar(160)
-  description     String   @db.Text
-  address         String   @db.VarChar(255)
-  province        String?  @db.VarChar(100)
+  id          String  @id @default(cuid())
+  name        String  @db.VarChar(120)
+  slug        String  @unique @db.VarChar(160)
+  description String  @db.Text
+  address     String  @db.VarChar(255)
+  province    String? @db.VarChar(100)
 
-  latitude        Float?
-  longitude       Float?
-  phone           String?  @db.VarChar(50)
-  email           String?  @db.VarChar(191)
-  website         String?  @db.VarChar(255)
-  social_links    Json?
+  latitude     Float?
+  longitude    Float?
+  phone        String? @db.VarChar(50)
+  email        String? @db.VarChar(191)
+  website      String? @db.VarChar(255)
+  social_links Json?
 
-  category_id     String
-  order_number    Int
+  category_id  String
+  order_number Int
 
-  cover_image     String?  @db.VarChar(512)
-  image_fit       String   @default("cover") @db.VarChar(20)
-  logo_url        String?  @db.VarChar(512)
-  is_active       Boolean  @default(true)
-  expired_at      DateTime?
-  created_at      DateTime @default(now())
-  renewal_count   Int      @default(0)
-  updated_at      DateTime @updatedAt
+  cover_image   String?   @db.VarChar(512)
+  image_fit     String    @default("cover") @db.VarChar(20)
+  logo_url      String?   @db.VarChar(512)
+  is_active     Boolean   @default(true)
+  expired_at    DateTime?
+  created_at    DateTime  @default(now())
+  renewal_count Int       @default(0)
+  updated_at    DateTime  @updatedAt
 
-  avg_rating      Float    @default(0)
-  review_count    Int      @default(0)
+  avg_rating   Float @default(0)
+  review_count Int   @default(0)
 
   meta_title       String? @db.VarChar(255)
   meta_description String? @db.VarChar(255)
@@ -170,6 +174,7 @@ model Store {
   sustainability SustainabilityTagOnStore[]
   amenities      AmenityOnStore[]
   tracking       TrackingScript[]
+  feedbacks      StoreFeedback[]
 
   @@unique([category_id, order_number])
   @@index([category_id])
@@ -187,7 +192,7 @@ model Branch {
   address    String   @db.VarChar(255)
   latitude   Float?
   longitude  Float?
-  phone      String? @db.VarChar(50)
+  phone      String?  @db.VarChar(50)
   is_active  Boolean  @default(true)
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -206,9 +211,9 @@ model OpeningHour {
   store_id  String?
   branch_id String?
   day       Weekday
-  openTime  String   @db.VarChar(8)
-  closeTime String   @db.VarChar(8)
-  isOpen    Boolean  @default(true)
+  openTime  String  @db.VarChar(8)
+  closeTime String  @db.VarChar(8)
+  isOpen    Boolean @default(true)
 
   store  Store?  @relation(fields: [store_id], references: [id], onDelete: Cascade)
   branch Branch? @relation(fields: [branch_id], references: [id], onDelete: Cascade)
@@ -262,17 +267,17 @@ model Image {
   image_url            String
   cloudinary_public_id String?
   order_number         Int
-  alt_text             String? @db.VarChar(255)
+  alt_text             String?  @db.VarChar(255)
   created_at           DateTime @default(now())
 
-  is_featured_home     Boolean  @default(false)
-  featured_order       Int?
-  allow_review         Boolean  @default(false)
-  menu_name            String? @db.VarChar(255)
-  price                Int?
-  rating               Float?   @default(0)
-  rating_count         Int      @default(0)
-  ratings              ImageRating[]
+  is_featured_home Boolean       @default(false)
+  featured_order   Int?
+  allow_review     Boolean       @default(false)
+  menu_name        String?       @db.VarChar(255)
+  price            Int?
+  rating           Float?        @default(0)
+  rating_count     Int           @default(0)
+  ratings          ImageRating[]
 
   store Store @relation(fields: [store_id], references: [id], onDelete: Cascade)
 
@@ -306,10 +311,10 @@ model Banner {
   id                   String   @id @default(cuid())
   image_url            String
   cloudinary_public_id String?
-  title                String? @db.VarChar(255)
-  alt_text             String? @db.VarChar(255)
+  title                String?  @db.VarChar(255)
+  alt_text             String?  @db.VarChar(255)
   order                Int      @default(0)
-  href                 String? @db.VarChar(255)
+  href                 String?  @db.VarChar(255)
   is_active            Boolean  @default(true)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
@@ -321,17 +326,17 @@ model Banner {
 // Videos
 // ----------------------
 model Video {
-  id            String   @id @default(cuid())
-  title         String   @db.VarChar(255)
-  youtube_url   String?  @db.VarChar(512)
-  tiktok_url    String?  @db.VarChar(512)
-  thumbnail_url String?  @db.VarChar(512)
-  order_number  Int      @default(0)
-  is_active     Boolean  @default(true)
+  id            String    @id @default(cuid())
+  title         String    @db.VarChar(255)
+  youtube_url   String?   @db.VarChar(512)
+  tiktok_url    String?   @db.VarChar(512)
+  thumbnail_url String?   @db.VarChar(512)
+  order_number  Int       @default(0)
+  is_active     Boolean   @default(true)
   start_date    DateTime?
   end_date      DateTime?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
 
   store_id String?
   store    Store?  @relation(fields: [store_id], references: [id], onDelete: SetNull)
@@ -346,8 +351,8 @@ model Video {
 // ----------------------
 model SustainabilityTag {
   id     String                     @id @default(cuid())
-  key    String                     @unique  @db.VarChar(64)
-  name   String @db.VarChar(255)
+  key    String                     @unique @db.VarChar(64)
+  name   String                     @db.VarChar(255)
   stores SustainabilityTagOnStore[]
 
   @@index([key])
@@ -369,7 +374,7 @@ model SustainabilityTagOnStore {
 model Amenity {
   id     String           @id @default(cuid())
   key    String           @unique
-  name   String @db.VarChar(255)
+  name   String           @db.VarChar(255)
   stores AmenityOnStore[]
 
   @@index([key])
@@ -391,11 +396,11 @@ model AmenityOnStore {
 model Event {
   id          String    @id @default(cuid())
   store_id    String
-  title       String @db.VarChar(255)
-  description String @db.Text
+  title       String    @db.VarChar(255)
+  description String    @db.Text
   start_at    DateTime
   end_at      DateTime?
-  cover_image String? @db.VarChar(512)
+  cover_image String?   @db.VarChar(512)
   is_active   Boolean   @default(true)
   created_at  DateTime  @default(now())
   updated_at  DateTime  @updatedAt
@@ -409,32 +414,32 @@ model Event {
 // Homepage Settings
 // ----------------------
 model HomeSettings {
-  id            String   @id @default("singleton")
-  hero_title    String   @db.VarChar(255)
-  hero_subtitle String   @db.VarChar(255)
-  show_search   Boolean  @default(true)
+  id            String  @id @default("singleton")
+  hero_title    String  @db.VarChar(255)
+  hero_subtitle String  @db.VarChar(255)
+  show_search   Boolean @default(true)
 
   missions_title String? @db.VarChar(255)
   missions_items Json?
 
-  updated_at    DateTime @updatedAt
+  updated_at DateTime @updatedAt
 }
 
 model HomeRow {
-  id            String       @id @default(cuid())
-  kind          HomeRowKind
-  title         String @db.VarChar(255)
-  cta_text      String? @db.VarChar(255)
-  cta_href      String? @db.VarChar(255)
-  visible       Boolean      @default(true)
-  order_number  Int          @default(0)
+  id           String      @id @default(cuid())
+  kind         HomeRowKind
+  title        String      @db.VarChar(255)
+  cta_text     String?     @db.VarChar(255)
+  cta_href     String?     @db.VarChar(255)
+  visible      Boolean     @default(true)
+  order_number Int         @default(0)
 
-  images        Json?
-  store_ids     Json?
-  video_ids     Json?
+  images    Json?
+  store_ids Json?
+  video_ids Json?
 
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@index([kind, visible, order_number])
 }
@@ -453,38 +458,38 @@ model SiteSeo {
 }
 
 model SiteFooter {
-  id          String   @id @default("singleton")
-  about_text  String? @db.VarChar(255)
-  address     String? @db.VarChar(255)
-  phone       String? @db.VarChar(255)
-  email       String? @db.VarChar(255)
-  socials     Json?
-  links       Json?
-  locations   Json?
-  hours       Json?
-  updated_at  DateTime @updatedAt
+  id         String   @id @default("singleton")
+  about_text String?  @db.VarChar(255)
+  address    String?  @db.VarChar(255)
+  phone      String?  @db.VarChar(255)
+  email      String?  @db.VarChar(255)
+  socials    Json?
+  links      Json?
+  locations  Json?
+  hours      Json?
+  updated_at DateTime @updatedAt
 }
 
 model Homepage {
   id                String   @id @default("default")
-  hero_title        String? @db.VarChar(255)
-  hero_subtitle     String? @db.VarChar(255)
+  hero_title        String?  @db.VarChar(255)
+  hero_subtitle     String?  @db.VarChar(255)
   missions          Json?
-  missions_subtitle String? @db.VarChar(255)
+  missions_subtitle String?  @db.VarChar(255)
   rows              Json?
   updated_at        DateTime @updatedAt
   created_at        DateTime @default(now())
 }
 
 model PageSeo {
-  id          String  @id @default(cuid())
-  path        String  @unique @db.VarChar(255)
-  title       String? @db.VarChar(255)
-  description String? @db.VarChar(512)
-  og_image    String? @db.VarChar(512)
+  id          String   @id @default(cuid())
+  path        String   @unique @db.VarChar(255)
+  title       String?  @db.VarChar(255)
+  description String?  @db.VarChar(512)
+  og_image    String?  @db.VarChar(512)
   og_images   Json?
   jsonld      Json?
-  noindex     Boolean @default(false)
+  noindex     Boolean  @default(false)
   updated_at  DateTime @updatedAt
 
   @@index([updated_at])
@@ -505,8 +510,8 @@ model TrackingScript {
   updatedAt  DateTime         @updatedAt
 
   // ✅ เพิ่ม storeId สำหรับผูกกับร้านค้า
-  storeId    String?          @db.VarChar(255)
-  store      Store?           @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId String? @db.VarChar(255)
+  store   Store?  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
   @@index([provider, enabled])
   @@index([storeId])
@@ -582,4 +587,23 @@ model SiteBrand {
   ogDefault   String?
   updatedAt   DateTime @updatedAt
   createdAt   DateTime @default(now())
+}
+
+model StoreFeedback {
+  id       String  @id @default(cuid())
+  store_id String
+  user_id  String? // optional ถ้าลูกค้า login อยู่
+
+  food_rating    Int
+  service_rating Int
+  comment        String?  @db.Text
+  source         String   @default("QR") @db.VarChar(50)
+  created_at     DateTime @default(now())
+
+  store Store @relation(fields: [store_id], references: [id], onDelete: Cascade)
+  user  User? @relation(fields: [user_id], references: [id])
+
+  @@index([store_id, created_at])
+  @@index([user_id])
+  @@map("store_feedbacks")
 }

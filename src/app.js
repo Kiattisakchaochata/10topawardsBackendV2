@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import healthRoute from "./routes/health.route.js";
+import proxyImageRouter from "./routes/proxyImage.route.js";
 
 import reviewRoutes from './routes/review.route.js';
 import authRoute from './routes/auth.route.js';
@@ -26,6 +27,8 @@ import publicTrackingRoutes from './routes/public/tracking.public.routes.js';
 
 // ⬇⬇⬇ public videos route
 import publicVideoRoutes from './routes/public/video.public.route.js';
+import storeFeedbackAdminRoute from './routes/admin/storeFeedback.admin.route.js';
+import storeFeedbackPublicRoute from './routes/public/storeFeedback.public.route.js';
 
 const app = express();
 
@@ -61,6 +64,7 @@ app.use(express.urlencoded({ extended: true }));
 // Health
 app.use("/api/health", healthRoute);
 
+
 // Admin/Public Routes
 app.use('/api/admin/banners', bannerRoute);
 app.use('/api/banners', publicBannerRoute);
@@ -80,8 +84,14 @@ app.use('/api/search', searchPublicRoute);
 app.use('/api/admin/seo', seoAdminRoutes);
 app.use('/api/public/seo', seoPublicRoutes);
 
+app.use('/api/admin', storeFeedbackAdminRoute);
+app.use('/api/public', storeFeedbackPublicRoute);
+
 // public videos
 app.use('/api/videos', publicVideoRoutes);
+app.use("/api/public", proxyImageRouter);
+
+
 
 // Cron
 startCronJobs();

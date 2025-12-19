@@ -33,6 +33,8 @@ router.post('/logout', authenticate, logout)
 
 // ✅ เข้าสู่ระบบผ่าน Google
 router.post('/oauth/google', validate(googleOAuthSchema), oauthGoogle)
+// ✅ alias สำหรับ callback แบบเดิม ให้ใช้ logic เดียวกัน
+router.post('/google/callback', validate(googleOAuthSchema), oauthGoogle)
 
 // ✅ เข้าสู่ระบบผ่าน Facebook
 router.post('/oauth/facebook', validate(facebookOAuthSchema), oauthFacebook)

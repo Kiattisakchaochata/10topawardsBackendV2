@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { PrismaClient } from "@prisma/client";
 import multer from "multer";
-
+import { ensureTikTokCoverUrl } from "../../lib/tiktokCover.js"
 const prisma = new PrismaClient();
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -25,19 +25,10 @@ function getYouTubeId(url = "") {
 function guessThumbFromId(id) {
   return id ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null;
 }
-/** helper: ดึงรูปตัวอย่างจาก TikTok oEmbed */
-async function fetchTikTokThumb(tiktokUrl = "") {
-  try {
-    const res = await fetch(
-      "https://www.tiktok.com/oembed?url=" + encodeURIComponent(tiktokUrl),
-      { cache: "no-store" }
-    );
-    if (!res.ok) return null;
-    const j = await res.json();
-    return j?.thumbnail_url || null;
-  } catch {
-    return null;
-  }
+/** ✅ helper: ดึง TikTok videoId จาก url (ตัวเลขท้าย /video/xxxx) */
+function getTikTokVideoId(url = "") {
+  const m = String(url).match(/\/video\/(\d+)/);
+  return m ? m[1] : null;
 }
 /** แปลงค่า store จาก body ให้ชัดเจน (รองรับ store_id และ storeId, ค่าว่าง = null) */
 function parseStoreId(body = {}) {
@@ -147,15 +138,25 @@ router.post("/", upload.single("thumbnail"), async (req, res) => {
     //   uploadedThumbUrl = uploaded.url;
     // }
 
-    let thumb = thumbnail_url ?? null;
+        let thumb = thumbnail_url ?? null;
 
-if (!thumb) {
-  if (ytId) {
-    thumb = `https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`;
-  } else if (tiktok_url) {
-    thumb = await fetchTikTokThumb(String(tiktok_url));
-  }
-}
+    if (!thumb) {
+      if (ytId) {
+        // YouTube → ใช้ thumbnail ปกติของ YouTube
+        thumb = guessThumbFromId(ytId);
+      } else if (tiktok_url) {
+        // ✅ TikTok → ดึงจาก oEmbed แล้วอัปโหลด Cloudinary
+        const tikId = getTikTokVideoId(String(tiktok_url));
+
+        const stableUrl = await ensureTikTokCoverUrl({
+          tiktokUrl: String(tiktok_url),
+          videoId: tikId || undefined,   // ใช้เลข videoId เป็น public_id
+          currentCoverUrl: null,
+        });
+
+        thumb = stableUrl || null;
+      }
+    }
 
     const created = await prisma.video.create({
       data: {
@@ -224,20 +225,32 @@ router.patch("/:id", upload.single("thumbnail"), async (req, res) => {
       }
     }
 
-    if ("tiktok_url" in data) {
-  const tik = String(data.tiktok_url || "");
-  if (tik && !/tiktok\.com\/@[^/]+\/video\/\d+/.test(tik)) {
-    return res.status(400).json({ message: "ลิงก์ TikTok ไม่ถูกต้อง" });
-  }
+        if ("tiktok_url" in data) {
+      const tik = String(data.tiktok_url || "");
 
-  // ถ้าไม่มี thumbnail ใหม่ (ทั้งจาก body และไฟล์) ให้ลองดึงจาก oEmbed
-  const noThumbInBody = !("thumbnail_url" in data) || !data.thumbnail_url;
-  const noFile = !req.file;
-  if (tik && noThumbInBody && noFile) {
-    const tikThumb = await fetchTikTokThumb(tik);
-    if (tikThumb) data.thumbnail_url = tikThumb;
-  }
-}
+      if (tik && !/tiktok\.com\/@[^/]+\/video\/\d+/.test(tik)) {
+        return res.status(400).json({ message: "ลิงก์ TikTok ไม่ถูกต้อง" });
+      }
+
+      // ถ้าไม่มี thumbnail ใหม่ (ทั้งจาก body และไฟล์) → ลองสร้างจาก Cloudinary
+      const noThumbInBody = !("thumbnail_url" in data) || !data.thumbnail_url;
+      const noFile = !req.file;
+
+      if (tik && noThumbInBody && noFile) {
+        const tikId = getTikTokVideoId(tik);
+
+        const stableUrl = await ensureTikTokCoverUrl({
+          tiktokUrl: tik,
+          // ใช้ tikId ถ้ามี, ไม่งั้น fallback เป็น id ของ record ใน DB
+          videoId: tikId || id,
+          currentCoverUrl: null,
+        });
+
+        if (stableUrl) {
+          data.thumbnail_url = stableUrl;
+        }
+      }
+    }
 
     if ("order_number" in data) data.order_number = Number(data.order_number) || 0;
     if ("is_active" in data) data.is_active = Boolean(data.is_active);
