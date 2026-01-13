@@ -74,6 +74,9 @@ export const createStore = async (req, res, next) => {
       social_links = '',
       order_number,
       expired_at,
+      is_featured_home,
+  featured_order,
+  featured_until,
     } = req.body;
 
     if (!name || !category_id) {
@@ -123,7 +126,17 @@ if (social_links !== undefined && social_links !== null && social_links !== '') 
     socialLinksVal = social_links;
   }
 }
+// ✅ parse featured fields
+const featuredParsed = toBoolOrNull(is_featured_home); // true/false/null
+const featuredOrderVal = toIntOrNull(featured_order);  // number/null
+const featuredUntilVal = featured_until ? new Date(featured_until) : null;
 
+// ถ้าไม่ได้ส่ง is_featured_home มาเลย → ถือว่า false (default)
+const isFeaturedFinal = featuredParsed === true;
+
+// ถ้าไม่ใช่ featured → เคลียร์ order/until กันค้าง
+const featuredOrderFinal = isFeaturedFinal ? featuredOrderVal : null;
+const featuredUntilFinal = isFeaturedFinal ? featuredUntilVal : null;
 const store = await prisma.store.create({
   data: {
     name,
@@ -137,6 +150,9 @@ const store = await prisma.store.create({
     cover_image: coverImageUrl,
     expired_at: expired_at ? new Date(expired_at) : null,
     is_active: true,
+    is_featured_home: isFeaturedFinal,
+    featured_order: featuredOrderFinal,
+    featured_until: featuredUntilFinal,
   },
   select: { id: true },
 });
@@ -228,6 +244,9 @@ export const getAllStores = async (req, res, next) => {
         social_links: true,
         category_id: true,
         is_active: true,
+      is_featured_home: true,
+       featured_order: true,
+     featured_until: true,
         order_number: true,
         created_at: true,
         updated_at: true,
@@ -264,6 +283,9 @@ export const getStoreById = async (req, res, next) => {
         category_id: true,
         order_number: true,
         cover_image: true,
+        is_featured_home: true,
+       featured_order: true,
+      featured_until: true,
         created_at: true,
         updated_at: true,
         expired_at: true,
@@ -300,6 +322,9 @@ export const updateStore = async (req, res, next) => {
       order_number,
       expired_at,
       is_active,
+      is_featured_home,
+      featured_order,
+      featured_until,
     } = req.body;
 
     if (category_id) {
@@ -445,6 +470,25 @@ if (social_links !== undefined) {
       // ⬇⬇⬇ เพิ่ม: parse is_active ถ้าส่งมา
       const activeParsed = toBoolOrNull(is_active);
       if (activeParsed !== null) data.is_active = activeParsed;
+      // ✅ Featured fields (ร้านรายปี/เด่นหน้าแรก)
+const featuredParsed = toBoolOrNull(is_featured_home);
+if (featuredParsed !== null) data.is_featured_home = featuredParsed;
+
+// featured_order: "" = null
+if (featured_order !== undefined) {
+  data.featured_order = toIntOrNull(featured_order);
+}
+
+// featured_until: "" = null (รองรับ date string)
+if (featured_until !== undefined) {
+  data.featured_until = featured_until ? new Date(featured_until) : null;
+}
+
+// ถ้าปิด featured → เคลียร์ค่าที่เกี่ยวข้อง ป้องกันค้าง
+if (featuredParsed === false) {
+  data.featured_order = null;
+  data.featured_until = null;
+}
       if (province !== undefined) data.province = province;
       if (Object.keys(data).length > 0) {
         await tx.store.update({ where: { id }, data });
@@ -732,7 +776,53 @@ export const renewStore = async (req, res, next) => {
     next(err);
   }
 };
+/* ======================= FEATURED (HOME) ===================== */
+export const getFeaturedStores = async (req, res, next) => {
+  try {
+    const limit = Math.max(1, Math.min(50, Number(req.query.limit || 12) || 12));
+    const now = new Date();
 
+    const stores = await prisma.store.findMany({
+      where: {
+        is_active: true,
+        is_featured_home: true,
+        OR: [{ featured_until: null }, { featured_until: { gte: now } }],
+      },
+      orderBy: [{ featured_order: "asc" }, { created_at: "desc" }],
+      take: limit,
+      select: {
+        id: true,
+        name: true,
+        address: true,
+        province: true,
+        description: true,
+        social_links: true,
+        category_id: true,
+        is_active: true,
+        order_number: true,
+        created_at: true,
+        updated_at: true,
+        expired_at: true,
+        cover_image: true,
+
+        is_featured_home: true,
+        featured_order: true,
+        featured_until: true,
+
+        category: true,
+        images: true,
+        reviews: true,
+        visitorCounter: true,
+        renewal_count: true,
+      },
+    });
+
+    const mapped = stores.map((s) => ({ ...s, renew_count: s.renewal_count }));
+    return res.json({ stores: mapped });
+  } catch (err) {
+    next(err);
+  }
+};
 /* ======================= REPORTS / STATS ===================== */
 export const getPopularStores = async (_req, res, next) => {
   try {

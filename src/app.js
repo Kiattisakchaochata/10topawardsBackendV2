@@ -77,6 +77,7 @@ app.use('/api/admin/images', imageAdminRoute);
 app.use('/api/admin/tracking', adminTrackingRoutes);
 app.use('/api', publicTrackingRoutes);
 app.use('/api/stores', publicStoreRoutes);
+app.use('/api/public/stores', publicStoreRoutes); // ✅ alias ให้เรียกแบบ /api/public/stores ได้
 app.use('/api/categories', publicCategoryRoutes);
 app.use('/api/visitor', visitorRoutes);
 app.use('/api/admin/videos', videoAdminRoute);

@@ -175,6 +175,9 @@ model Store {
   amenities      AmenityOnStore[]
   tracking       TrackingScript[]
   feedbacks      StoreFeedback[]
+  is_featured_home   Boolean   @default(false)  // ร้านรายปี/พรีเมียม แสดงหน้าแรก
+  featured_order     Int?                      // ลำดับการแสดง (1..n)
+  featured_until     DateTime?                 // วันหมดอายุแพ็กเกจรายปี
 
   @@unique([category_id, order_number])
   @@index([category_id])
