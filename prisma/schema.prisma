@@ -17,6 +17,11 @@ enum Role {
   USER
   ADMIN
 }
+enum FeedbackQuestionType {
+  STAR_1_5
+  NUMBER_0_10
+  TEXT
+}
 
 enum OAuthProvider {
   GOOGLE
@@ -142,7 +147,9 @@ model Store {
   phone        String? @db.VarChar(50)
   email        String? @db.VarChar(191)
   website      String? @db.VarChar(255)
+  google_place_id String? @db.VarChar(255)
   social_links Json?
+  
 
   category_id  String
   order_number Int
@@ -175,9 +182,11 @@ model Store {
   amenities      AmenityOnStore[]
   tracking       TrackingScript[]
   feedbacks      StoreFeedback[]
+  feedbackQuestions StoreFeedbackQuestion[]
   is_featured_home   Boolean   @default(false)  // ร้านรายปี/พรีเมียม แสดงหน้าแรก
   featured_order     Int?                      // ลำดับการแสดง (1..n)
   featured_until     DateTime?                 // วันหมดอายุแพ็กเกจรายปี
+  googleSnapshot StoreGoogleSnapshot?
 
   @@unique([category_id, order_number])
   @@index([category_id])
@@ -489,6 +498,7 @@ model PageSeo {
   path        String   @unique @db.VarChar(255)
   title       String?  @db.VarChar(255)
   description String?  @db.VarChar(512)
+  keywords    String?  @db.VarChar(512)
   og_image    String?  @db.VarChar(512)
   og_images   Json?
   jsonld      Json?
@@ -596,17 +606,71 @@ model StoreFeedback {
   id       String  @id @default(cuid())
   store_id String
   user_id  String? // optional ถ้าลูกค้า login อยู่
-
-  food_rating    Int
-  service_rating Int
   comment        String?  @db.Text
   source         String   @default("QR") @db.VarChar(50)
   created_at     DateTime @default(now())
 
   store Store @relation(fields: [store_id], references: [id], onDelete: Cascade)
   user  User? @relation(fields: [user_id], references: [id])
+  answers StoreFeedbackAnswer[]
 
   @@index([store_id, created_at])
   @@index([user_id])
   @@map("store_feedbacks")
+}
+model StoreFeedbackQuestion {
+  id         String               @id @default(cuid())
+  store_id   String
+  key        String               @db.VarChar(64)    // เช่น food, service, atmosphere (ใช้เป็นรหัส)
+  label      String               @db.VarChar(255)   // ข้อความคำถามที่แสดง
+  type       FeedbackQuestionType @default(STAR_1_5)
+  required   Boolean              @default(true)
+  order_no   Int                  @default(0)
+  is_active  Boolean              @default(true)
+  created_at DateTime             @default(now())
+  updated_at DateTime             @updatedAt
+
+  store   Store                 @relation(fields: [store_id], references: [id], onDelete: Cascade)
+  answers StoreFeedbackAnswer[]
+
+  @@unique([store_id, key])         // กัน key ซ้ำในร้านเดียวกัน
+  @@unique([store_id, order_no, is_active])    // กันลำดับซ้ำ (ถ้าคุณต้องการบังคับ)
+  @@index([store_id, is_active, order_no])
+  @@map("store_feedback_questions")
+}
+model StoreFeedbackAnswer {
+  id           String   @id @default(cuid())
+  feedback_id  String
+  question_id  String
+
+  // เก็บได้ทั้งตัวเลขและข้อความ (ตาม type ของคำถาม)
+  value_number Decimal? @db.Decimal(5,2)
+  value_text   String?  @db.Text
+
+  feedback  StoreFeedback         @relation(fields: [feedback_id], references: [id], onDelete: Cascade)
+  question  StoreFeedbackQuestion @relation(fields: [question_id], references: [id], onDelete: Cascade)
+
+  @@unique([feedback_id, question_id]) // feedback 1 อัน ตอบคำถามเดิมซ้ำไม่ได้
+  @@index([question_id])
+  @@index([feedback_id])
+  @@map("store_feedback_answers")
+}
+model StoreGoogleSnapshot {
+  id          String   @id @default(cuid())
+  store_id    String   @unique
+  place_id    String   @db.VarChar(255)
+
+  rating      Float?
+  total       Int?
+  reviews     Json?    // เก็บ “ตัวอย่างรีวิว” (เป็น cache)
+  maps_url    String?  @db.VarChar(512)
+
+  fetched_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  store Store @relation(fields: [store_id], references: [id], onDelete: Cascade)
+
+  @@index([fetched_at])
+  @@index([place_id])
+  @@map("store_google_snapshots")
 }

@@ -52,14 +52,15 @@ export async function upsertSiteSeo(req, res) {
     const { meta_title, meta_description, keywords, og_image, jsonld } = req.body ?? {};
     const jsonldParsed = safeParseJson(jsonld) || {};
 
+
     // normalize + validate keywords
     const normalized = normalizeKeywords(keywords);
-    if (normalized && normalized.length > LIMITS.KEYWORDS) {
-      return res.status(400).json({
-        error: 'KEYWORDS_TOO_LONG',
-        message: `keywords ยาวเกินกำหนด (สูงสุด ${LIMITS.KEYWORDS} ตัวอักษร รวมจุลภาคและช่องว่าง)`,
-      });
-    }
+if (normalized && normalized.length > LIMITS.KEYWORDS) {
+  return res.status(400).json({
+    error: 'KEYWORDS_TOO_LONG',
+    message: `keywords ยาวเกินกำหนด (สูงสุด ${LIMITS.KEYWORDS})`,
+  });
+}
 
     // sync keywords ลง JSON-LD ถ้ามี
     if (typeof jsonldParsed === 'object' && jsonldParsed) {
@@ -112,7 +113,22 @@ export async function upsertSiteSeo(req, res) {
 
 /* ====== Admin: Per Page (PageSeo) ====== */
 export async function listPageSeo(_req, res) {
-  const pages = await prisma.pageSeo.findMany({ orderBy: { updated_at: 'desc' }, take: 200 });
+  const pages = await prisma.pageSeo.findMany({
+    orderBy: { updated_at: 'desc' },
+    take: 200,
+    select: {
+      id: true,
+      path: true,
+      title: true,
+      description: true,
+      keywords: true,     // ✅ เพิ่มบรรทัดนี้
+      og_image: true,
+      og_images: true,
+      jsonld: true,
+      noindex: true,
+      updated_at: true,
+    },
+  });
   res.json({ pages });
 }
 
@@ -126,27 +142,32 @@ export async function getPageSeoByPath(req, res) {
 
 export async function upsertPageSeo(req, res) {
   try {
-    const { title, description, og_image, jsonld, noindex } = req.body ?? {};
+    const { title, description, og_image, jsonld, noindex, keywords } = req.body ?? {};
     const path = normPath(req.body?.path);
     if (!path) return res.status(400).json({ message: 'path is required' });
 
-    // validate length ก่อนชน DB
     const errs = [];
     if (path.length > LIMITS.PATH) errs.push(`path เกิน ${LIMITS.PATH}`);
     if (title && String(title).length > LIMITS.TITLE) errs.push(`title เกิน ${LIMITS.TITLE}`);
     if (description && String(description).length > LIMITS.DESC) errs.push(`description เกิน ${LIMITS.DESC}`);
     if (og_image && String(og_image).length > LIMITS.OG) errs.push(`og_image เกิน ${LIMITS.OG}`);
+
+    const normalized = normalizeKeywords(keywords);
+    if (normalized && normalized.length > LIMITS.KEYWORDS) errs.push(`keywords เกิน ${LIMITS.KEYWORDS}`);
+
     if (errs.length) {
       return res.status(400).json({ error: 'VALIDATION_ERROR', details: errs });
     }
 
-    const jsonldParsed = safeParseJson(jsonld);
+    const jsonldParsed = safeParseJson(jsonld) || {};
+    if (normalized) jsonldParsed.keywords = normalized;
 
     const data = await prisma.pageSeo.upsert({
       where: { path },
-      create: { path, title, description, og_image, jsonld: jsonldParsed, noindex: !!noindex },
-      update: {       title, description, og_image, jsonld: jsonldParsed, noindex: !!noindex },
+      create: { path, title, description, keywords: normalized, og_image, og_images: null, jsonld: jsonldParsed, noindex: !!noindex },
+      update: {       title, description, keywords: normalized, og_image,              jsonld: jsonldParsed, noindex: !!noindex },
     });
+
     res.json(data);
   } catch (err) {
     if (err?.code === 'P2000') {
@@ -155,6 +176,7 @@ export async function upsertPageSeo(req, res) {
         path: LIMITS.PATH,
         title: LIMITS.TITLE,
         description: LIMITS.DESC,
+        keywords: LIMITS.KEYWORDS, // ✅ เพิ่ม
         og_image: LIMITS.OG,
       };
       if (map[col]) {
@@ -196,12 +218,13 @@ export async function getPagePublic(path) {
   const page = await prisma.pageSeo.findUnique({ where: { path: norm } });
   if (!page) return null;
   return {
-    title: page.title || null,
-    description: page.description || null,
-    og_image: page.og_image || null,
-    jsonld: page.jsonld || null,
-    noindex: !!page.noindex,
-  };
+  title: page.title || null,
+  description: page.description || null,
+  keywords: page.keywords || null, // ✅ เพิ่มถ้าต้องใช้
+  og_image: page.og_image || null,
+  jsonld: page.jsonld || null,
+  noindex: !!page.noindex,
+};
 }
 
 

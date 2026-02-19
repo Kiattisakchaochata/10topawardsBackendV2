@@ -77,6 +77,8 @@ export const createStore = async (req, res, next) => {
       is_featured_home,
   featured_order,
   featured_until,
+  latitude,
+  longitude,
     } = req.body;
 
     if (!name || !category_id) {
@@ -144,6 +146,8 @@ const store = await prisma.store.create({
     description,
     address,
     province,
+    latitude: latitude !== undefined && latitude !== '' && Number.isFinite(Number(latitude)) ? Number(latitude) : null,
+    longitude: longitude !== undefined && longitude !== '' && Number.isFinite(Number(longitude)) ? Number(longitude) : null,
     social_links: socialLinksVal,
     category_id,
     order_number: desiredOrder,
@@ -192,9 +196,20 @@ const store = await prisma.store.create({
 
     // ❺ คืนค่า
     const storeWithImages = await prisma.store.findUnique({
-      where: { id: store.id },
-      include: { images: true, category: true },
-    });
+  where: { id: store.id },
+  select: {
+    id: true,
+    name: true,
+    address: true,
+    province: true,
+    latitude: true,
+    longitude: true,
+    phone: true,
+    website: true,
+    category: true,
+    images: true,
+  },
+});
 
     res.status(201).json({
       message: 'สร้างร้านค้าสำเร็จ',
@@ -257,6 +272,8 @@ export const getAllStores = async (req, res, next) => {
         reviews: true,
         visitorCounter: true,
         renewal_count: true,
+        latitude: true,
+        longitude: true,
       },
     });
 
@@ -292,9 +309,14 @@ export const getStoreById = async (req, res, next) => {
         is_active: true,
         category: true,
         images: true,
+        province: true,
+        latitude: true,
+        longitude: true,
+        phone: true,
+        website: true,
         renewal_count: true,
         reviews: {
-          include: { user: { select: { id: true, name: true } } },
+        include: { user: { select: { id: true, name: true } } },
         },
         visitorCounter: true,
       },
@@ -325,6 +347,8 @@ export const updateStore = async (req, res, next) => {
       is_featured_home,
       featured_order,
       featured_until,
+      latitude,
+      longitude,
     } = req.body;
 
     if (category_id) {
@@ -488,6 +512,15 @@ if (featured_until !== undefined) {
 if (featuredParsed === false) {
   data.featured_order = null;
   data.featured_until = null;
+}
+if (latitude !== undefined) {
+  const n = latitude === '' ? null : Number(latitude);
+  data.latitude = n === null ? null : (Number.isFinite(n) ? n : null);
+}
+
+if (longitude !== undefined) {
+  const n = longitude === '' ? null : Number(longitude);
+  data.longitude = n === null ? null : (Number.isFinite(n) ? n : null);
 }
       if (province !== undefined) data.province = province;
       if (Object.keys(data).length > 0) {

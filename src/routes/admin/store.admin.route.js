@@ -1,4 +1,5 @@
 import express from 'express';
+import { getFeedbackSummary } from '../../controllers/admin.feedback.controller.js';
 import {
   createStore,
   getAllStores,
@@ -39,6 +40,7 @@ router.get('/expiring-soon', getExpiringSoonStores);
 router.patch('/:id/reactivate', reactivateStore);
 // ✅ ต่ออายุร้าน
 router.patch('/:id/renew', renewStore);
+router.get('/feedback/summary', getFeedbackSummary);
 
 // ---------- CRUD ----------
 router.get('/loyalty', getStoreLoyaltyStats);

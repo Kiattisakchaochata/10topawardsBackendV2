@@ -7,6 +7,7 @@ import proxyImageRouter from "./routes/proxyImage.route.js";
 
 import reviewRoutes from './routes/review.route.js';
 import authRoute from './routes/auth.route.js';
+import storeFeedbackQuestionAdminRoutes from './routes/admin/storeFeedbackQuestion.admin.route.js';
 import storeAdminRoute from './routes/admin/store.admin.route.js';
 import categoryAdminRoute from './routes/admin/category.admin.route.js';
 import userAdminRoute from './routes/admin/user.admin.route.js';
@@ -84,7 +85,7 @@ app.use('/api/admin/videos', videoAdminRoute);
 app.use('/api/search', searchPublicRoute);
 app.use('/api/admin/seo', seoAdminRoutes);
 app.use('/api/public/seo', seoPublicRoutes);
-
+app.use('/api/admin', storeFeedbackQuestionAdminRoutes);
 app.use('/api/admin', storeFeedbackAdminRoute);
 app.use('/api/public', storeFeedbackPublicRoute);
 

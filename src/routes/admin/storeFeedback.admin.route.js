@@ -13,6 +13,4 @@ router.get('/stores/:id/feedback/stats', getStoreFeedbackStats);
 router.get('/feedback/summary', getAllStoreFeedbackSummary);
 
 
-router.get('/stores/:id/feedback/stats', getStoreFeedbackStats);
-
 export default router;
