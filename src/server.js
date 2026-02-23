@@ -4,7 +4,7 @@ import app from './app.js';
 import shutdown from './utils/shutdown.util.js';
 
 const HOST = process.env.HOST || '127.0.0.1';   // ให้ Nginx ต่อเข้ามาที่ 127.0.0.1
-const PORT = Number(process.env.PORT || 8899);
+const PORT = Number(process.env.PORT || 8900);
 
 // ==== start server ==========================================================
 const server = app
