@@ -63,7 +63,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Health
-app.use("/api/health", healthRoute);
+// Health
+app.get('/health', (_req, res) => {
+  res.status(200).json({ ok: true, uptime: process.uptime() });
+});
+
+app.use('/api/health', healthRoute);
 
 
 // Admin/Public Routes
